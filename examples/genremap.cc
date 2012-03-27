@@ -72,7 +72,7 @@ struct Request {
   String mDomain;
   MyState *mState;
 
-  void
+  bool
   lookupNext()
   {
     // Forward decl
@@ -81,11 +81,14 @@ struct Request {
     if (size(mState->mDomains) > 0) {
       mDomain = mState->mDomains.back();
       mState->mDomains.pop_back();
-      ares_gethostbyname(mState->mChannel, mDomain.c_str(), AF_INET, (ares_host_callback)&caresCallback, this);
-    } else {
-      delete this;
+      if (size(mDomain) > 0) {
+        ares_gethostbyname(mState->mChannel, mDomain.c_str(), AF_INET, (ares_host_callback)&caresCallback, this);
+        return true;
+      }
     }
+    return false;
   }
+
 };
 
 
@@ -103,7 +106,8 @@ caresCallback(void *arg, int status, int timeouts, struct hostent *hostent)
     cerr << "Failed lookup: #" << req->mDomain << "#" << endl;
   }
 
-  req->lookupNext();
+  if (!req->lookupNext())
+    delete req;
 }
 
 
@@ -132,10 +136,11 @@ main(int argc, char* argv[])
   unique(state.mDomains); // Explicit sort is still required ... TODO ?
 
   // Kick off MAX_DNS_REQUESTS initially, and then start the event loop.
-  while (reqs-- != 0 && state.mDomains.size()) {
+  while (reqs-- != 0) {
     Request *req = new Request(&state);
 
-    req->lookupNext();
+    if (!req->lookupNext())
+      break;
   }
 
   while (1) {
