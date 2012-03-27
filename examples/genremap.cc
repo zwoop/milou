@@ -1,6 +1,8 @@
 // #!/bin/env milou -lcares
 // Implies -std=c++0x with gcc
 
+// /opt/gcc/bin/g++  -g -O3 -Wall -L/opt/gcc/lib64 -Wl,-rpath=/opt/gcc/lib64 -I ../include -std=c++11 -lcares genremap.cc
+
 /** @file
 
     Read domain names (one per line) from either stdin, or a provided file,
@@ -36,77 +38,85 @@
 // Standard stuff, we should include this with milou/milou.h
 static const int MAX_DNS_REQUESTS = 100; // Max outstanding DNS requestsa
 
+// One of these per resolver / state.
 struct MyState {
+  MyState()
+  {
+    struct ares_options options;
+
+    options.lookups = const_cast<char*>("b");
+#if CARES_HAVE_ARES_LIBRARY_INIT
+    ares_library_init(ARES_LIB_INIT_ALL);
+#endif
+    ares_init_options(&mChannel, &options, ARES_OPT_LOOKUPS);
+  }
+
+  ~MyState()
+  {
+    ares_destroy(mChannel);
+#if CARES_HAVE_ARES_LIBRARY_CLEANUP
+    ares_library_cleanup();
+#endif
+  }
+
+  // Members
   ares_channel mChannel;
-  String mDomain;
-  Strings *mDomains;
+  Strings mDomains;
 };
 
-// Setup the state structure (for C-ARES etc.)
-void
-initialize(MyState &state)
-{
-  struct ares_options options;
+struct Request {
+  Request(MyState *state)
+    : mDomain(""), mState(state)
+  { }
 
-  options.lookups = const_cast<char*>("b");
-  ios_base::sync_with_stdio(false);
-#if CARES_HAVE_ARES_LIBRARY_INIT
-  ares_library_init(ARES_LIB_INIT_ALL);
-#endif
+  String mDomain;
+  MyState *mState;
 
-  ares_init_options(&state.mChannel, &options, ARES_OPT_LOOKUPS);
-}
+  void
+  lookupNext()
+  {
+    // Forward decl
+    void caresCallback(void *arg, int status, int timeouts, struct hostent *hostent);
 
-// Cleanup C-ARES primarily.
-void
-cleanup(MyState &state)
-{
-  ares_destroy(state.mChannel);
-#if CARES_HAVE_ARES_LIBRARY_CLEANUP
-  ares_library_cleanup();
-#endif
-}
+    if (size(mState->mDomains) > 0) {
+      mDomain = mState->mDomains.back();
+      mState->mDomains.pop_back();
+      ares_gethostbyname(mState->mChannel, mDomain.c_str(), AF_INET, (ares_host_callback)&caresCallback, this);
+    } else {
+      delete this;
+    }
+  }
+};
+
 
 void
 caresCallback(void *arg, int status, int timeouts, struct hostent *hostent)
 {
-  void doRequest(MyState *state); // Forward declaration.
-  MyState *state = static_cast<MyState*>(arg);
+  Request *req = static_cast<Request*>(arg);
 
   if (hostent) {
     char ip[INET6_ADDRSTRLEN];
 
     inet_ntop(hostent->h_addrtype, hostent->h_addr_list[0], ip, sizeof(ip));
-    cout << "map http://" << state->mDomain << " http://" << ip << endl;
+    cout << "map http://" << req->mDomain << " http://" << ip << endl;
   } else {
-    cerr << "Failed lookup: " << state->mDomain << endl;
+    cerr << "Failed lookup: #" << req->mDomain << "#" << endl;
   }
-  doRequest(state);
-  delete state; // These can only be cloned from the MasterState
+
+  req->lookupNext();
 }
 
 
-void
-doRequest(MyState *aState)
+// Main entry point for this script. The fluff above is only to deal with a
+// wonky asynchronous resolver (we probably should abstract that away ...)
+int
+main(int argc, char* argv[])
 {
-  if (aState->mDomains->size()) {
-    MyState *state = new MyState(*aState);
-
-    state->mDomain = state->mDomains->back();
-    ares_gethostbyname(state->mChannel, state->mDomain.c_str(), AF_INET, (ares_host_callback)&caresCallback, state);
-    state->mDomains->pop_back();
-  }
-}
-
-
-int main(int argc, char* argv[])
-{
-  MyState masterState;
-  Strings domains;    // TODO: Would be nice to e.g. do String mDomains[];  and make that generate the vector.
+  MyState state;
   auto reqs = MAX_DNS_REQUESTS;
 
-  initialize(masterState);
-  masterState.mDomains = &domains;
+  // TODO: Collect / move this to some standard startup
+  ios_base::sync_with_stdio(false);
 
   while (cin) {
     String line;
@@ -114,32 +124,32 @@ int main(int argc, char* argv[])
     getline(cin, line);
     chomp(line);
     trim(line);
-    if (line.size() > 0)
-      domains.push_back(line);
+    if (size(line) > 0)
+      state.mDomains.push_back(line);
   }
 
-  // TODO: These needs easier versions, e.g. sort(domains);
-  sort(domains.begin(), domains.end());
-  domains.erase(unique(domains.begin(), domains.end()), domains.end());
+  sort(state.mDomains);
+  unique(state.mDomains); // Explicit sort is still required ... TODO ?
 
   // Kick off MAX_DNS_REQUESTS initially, and then start the event loop.
-  while (reqs-- != 0 && domains.size())
-    doRequest(&masterState);
+  while (reqs-- != 0 && state.mDomains.size()) {
+    Request *req = new Request(&state);
+
+    req->lookupNext();
+  }
 
   while (1) {
-    int nfds, count;
+    int nfds;
     fd_set readers, writers;
     struct timeval tv, *tvp;
 
     FD_ZERO(&readers);
     FD_ZERO(&writers);
-    nfds = ares_fds(masterState.mChannel, &readers, &writers);
+    nfds = ares_fds(state.mChannel, &readers, &writers);
     if (nfds == 0)
       break;
-    tvp = ares_timeout(masterState.mChannel, NULL, &tv);
-    count = select(nfds, &readers, &writers, NULL, tvp);
-    ares_process(masterState.mChannel, &readers, &writers);
+    tvp = ares_timeout(state.mChannel, NULL, &tv);
+    select(nfds, &readers, &writers, NULL, tvp);
+    ares_process(state.mChannel, &readers, &writers);
   }
-
-  cleanup(masterState);
 }

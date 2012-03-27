@@ -1,6 +1,10 @@
 /** @file
 
-    Various string related algorithms and extensions.
+    Various (other) things to make milou look like Perl... Not sure why, but
+    seemed like a good idea at the time.
+
+    This focusing on the fact that the "scripts" should be as short and
+    quick to type as possible.
 
     @section license License
 
@@ -20,32 +24,17 @@
     limitations under the License.
 */
 
-#ifndef _milou_strings_H_
-#define _milou_strings_H_
+#ifndef _milou_perl_H_
+#define _milou_perl_H_
 
-#include <string>
-#include <boost/algorithm/string.hpp>
+#include <boost/any.hpp>
 
-typedef std::string String;
+typedef boost::any my;
 
-// Trim any trailing \r\n.
-template<typename T>
-inline void
-chomp(T& input, const std::locale& loc=std::locale())
-{
-  boost::algorithm::trim_right_if(input, boost::is_any_of("\r\n"));
-}
+using boost::any_cast;
 
-inline size_t
-size(String& s)
-{
-  return s.size();
-}
+// Also make sure to drag in the kitchen sink into the name space.
+using namespace std;
+using namespace boost::algorithm;
 
-inline size_t
-size(String *s)
-{
-  return s->size();
-}
-
-#endif // _milou_strings_H_
+#endif // _milou_perl_H_

@@ -1,23 +1,22 @@
 /** @file
 
-    This is a convenience include file, intended for the typical user
-    to include. This does pull in the kitchen sink, but for a "script"
-    it is fine.
+    This is a convenience include file, intended for the typical user to
+    include. This does pull in the kitchen sink, but for a "script" it is
+    fine.
 
     This focusing on the fact that the "scripts" should be as short and
     quick to type as possible.
 
     @section license License
 
-    Licensed to the Apache Software Foundation (ASF) under one
-    or more contributor license agreements.  See the NOTICE file
-    distributed with this work for additional information
-    regarding copyright ownership.  The ASF licenses this file
-    to you under the Apache License, Version 2.0 (the
-    "License"); you may not use this file except in compliance
-    with the License.  You may obtain a copy of the License at
+    Licensed to the Apache Software Foundation (ASF) under one or more
+    contributor license agreements.  See the NOTICE file distributed with
+    this work for additional information regarding copyright ownership.  The
+    ASF licenses this file to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance with the
+    License.  You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+        http://www.apache.org/licenses/LICENSE-2.0
 
     Unless required by applicable law or agreed to in writing, software
     distributed under the License is distributed on an "AS IS" BASIS,
@@ -34,9 +33,11 @@
 #include <vector>
 
 #include <milou/strings.h>
+#include <milou/array.h>
+#include <milou/perl.h>
 
 // Also make sure to drag in the kitchen sink into the name space.
 using namespace std;
 using namespace boost::algorithm;
 
-#endif
+#endif // _milou_milou_H_
