@@ -48,24 +48,48 @@ struct MyState {
 #if CARES_HAVE_ARES_LIBRARY_INIT
     ares_library_init(ARES_LIB_INIT_ALL);
 #endif
-    ares_init_options(&mChannel, &options, ARES_OPT_LOOKUPS);
+    ares_init_options(&_channel, &options, ARES_OPT_LOOKUPS);
   }
 
   ~MyState()
   {
-    ares_destroy(mChannel);
+    ares_destroy(_channel);
 #if CARES_HAVE_ARES_LIBRARY_CLEANUP
     ares_library_cleanup();
 #endif
   }
 
+  bool
+  aresProcess()
+  {
+    int nfds;
+    fd_set readers, writers;
+    struct timeval tv, *tvp;
+
+    FD_ZERO(&readers);
+    FD_ZERO(&writers);
+    nfds = ares_fds(_channel, &readers, &writers);
+    if (nfds == 0)
+      return false;
+
+    tvp = ares_timeout(_channel, NULL, &tv);
+    select(nfds, &readers, &writers, NULL, tvp);
+    ares_process(_channel, &readers, &writers);
+
+    return true;
+  }
+
+  ares_channel channel() const { return _channel; }
+
   // Members
-  ares_channel mChannel;
   Strings mDomains;
+
+private:
+  ares_channel _channel;
 };
 
-struct Request {
-  Request(MyState *state)
+struct AresRequest {
+  AresRequest(MyState *state)
     : mDomain(""), mState(state)
   { }
 
@@ -82,7 +106,7 @@ struct Request {
       mDomain = mState->mDomains.back();
       mState->mDomains.pop_back();
       if (size(mDomain) > 0) {
-        ares_gethostbyname(mState->mChannel, mDomain.c_str(), AF_INET, (ares_host_callback)&caresCallback, this);
+        ares_gethostbyname(mState->channel(), mDomain.c_str(), AF_INET, (ares_host_callback)&caresCallback, this);
         return true;
       }
     }
@@ -95,7 +119,7 @@ struct Request {
 void
 caresCallback(void *arg, int status, int timeouts, struct hostent *hostent)
 {
-  Request *req = static_cast<Request*>(arg);
+  AresRequest *req = static_cast<AresRequest*>(arg);
 
   if (hostent) {
     char ip[INET6_ADDRSTRLEN];
@@ -133,28 +157,17 @@ main(int argc, char* argv[])
   }
 
   sort(state.mDomains);
-  unique(state.mDomains); // Explicit sort is still required ... TODO ?
+  unique(state.mDomains);
 
   // Kick off MAX_DNS_REQUESTS initially, and then start the event loop.
   while (reqs-- != 0) {
-    Request *req = new Request(&state);
+    AresRequest *req = new AresRequest(&state);
 
     if (!req->lookupNext())
-      break;
+      break; // No more domains
   }
 
-  while (1) {
-    int nfds;
-    fd_set readers, writers;
-    struct timeval tv, *tvp;
-
-    FD_ZERO(&readers);
-    FD_ZERO(&writers);
-    nfds = ares_fds(state.mChannel, &readers, &writers);
-    if (nfds == 0)
-      break;
-    tvp = ares_timeout(state.mChannel, NULL, &tv);
-    select(nfds, &readers, &writers, NULL, tvp);
-    ares_process(state.mChannel, &readers, &writers);
-  }
+  // Spin baby, spin!
+  while (state.aresProcess())
+    ;
 }
