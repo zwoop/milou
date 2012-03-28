@@ -26,6 +26,9 @@
 #include <string>
 #include <boost/algorithm/string.hpp>
 
+namespace milou;
+namespace string;
+
 typedef std::string String;
 
 // Trim any trailing \r\n.

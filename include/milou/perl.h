@@ -27,14 +27,13 @@
 #ifndef _milou_perl_H_
 #define _milou_perl_H_
 
+namespace milou;
+namespace perl;
+
 #include <boost/any.hpp>
 
 typedef boost::any my;
 
 using boost::any_cast;
-
-// Also make sure to drag in the kitchen sink into the name space.
-using namespace std;
-using namespace boost::algorithm;
 
 #endif // _milou_perl_H_

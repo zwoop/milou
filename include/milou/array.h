@@ -26,6 +26,9 @@
 #include <vector>
 #include <milou/strings.h>
 
+namespace milou;
+namespace vector;
+
 typedef std::vector<String> Strings;
 
 // Chomp all strings in an array.

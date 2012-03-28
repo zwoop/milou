@@ -38,61 +38,6 @@
 // Standard stuff, we should include this with milou/milou.h
 static const int MAX_DNS_REQUESTS = 100; // Max outstanding DNS requestsa
 
-// One of these per resolver / state.
-class DNSResolver {
-public:
-  // CTOR
-  DNSResolver()
-  {
-    struct ares_options options;
-
-    options.lookups = const_cast<char*>("b");
-#if CARES_HAVE_ARES_LIBRARY_INIT
-    ares_library_init(ARES_LIB_INIT_ALL);
-#endif
-    ares_init_options(&_channel, &options, ARES_OPT_LOOKUPS);
-  }
-
-  // DTOR
-  ~DNSResolver()
-  {
-    ares_destroy(_channel);
-#if CARES_HAVE_ARES_LIBRARY_CLEANUP
-    ares_library_cleanup();
-#endif
-  }
-
-  // Main processing point, call this one you have populated a domain or
-  // two in the resolver.
-  bool
-  process()
-  {
-    int nfds;
-    fd_set readers, writers;
-    struct timeval tv, *tvp;
-
-    FD_ZERO(&readers);
-    FD_ZERO(&writers);
-    nfds = ares_fds(_channel, &readers, &writers);
-    if (nfds == 0)
-      return false;
-
-    tvp = ares_timeout(_channel, NULL, &tv);
-    select(nfds, &readers, &writers, NULL, tvp);
-    ares_process(_channel, &readers, &writers);
-
-    return true;
-  }
-
-  ares_channel channel() const { return _channel; }
-
-  // Members
-  Strings mDomains;
-
-private:
-  ares_channel _channel;
-};
-
 struct AresRequest {
   AresRequest(DNSResolver *state)
     : mDomain(""), mState(state)

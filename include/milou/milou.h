@@ -35,9 +35,15 @@
 #include <milou/strings.h>
 #include <milou/array.h>
 #include <milou/perl.h>
+#include <milou/dns.h>
 
 // Also make sure to drag in the kitchen sink into the name space.
 using namespace std;
 using namespace boost::algorithm;
+
+using namespace milou::string;
+using namespace milou::array;
+using namespace milou::perl;
+using namespace milou::dns;
 
 #endif // _milou_milou_H_
