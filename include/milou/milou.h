@@ -32,7 +32,7 @@
 #include <algorithm>
 #include <vector>
 
-#include <milou/strings.h>
+#include <milou/string.h>
 #include <milou/array.h>
 #include <milou/perl.h>
 #include <milou/dns.h>

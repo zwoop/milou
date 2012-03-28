@@ -20,69 +20,69 @@
     limitations under the License.
 */
 
-#ifndef _milou_array_H_
-#define _milou_array_H_
+#pragma once
 
 #include <vector>
-#include <milou/strings.h>
+#include <milou/string.h>
 
-namespace milou;
-namespace vector;
+namespace milou {
+  namespace vector {
 
-typedef std::vector<String> Strings;
+    typedef std::vector<String> Strings;
 
-// Chomp all strings in an array.
-Strings&
-chomp(Strings& arr)
-{
-  for (auto s : arr)
-    chomp(s);
-  return arr;
-}
+    // Chomp all strings in an array.
+    Strings&
+      chomp(Strings& arr)
+      {
+        for (auto s : arr)
+          chomp(s);
+        return arr;
+      }
 
-// Size-of...
-template <typename T>
-inline size_t
-size(std::vector<T>& v)
-{
-  return v.size();
-}
+    // Size-of...
+    template <typename T>
+      inline size_t
+      size(std::vector<T>& v)
+      {
+        return v.size();
+      }
 
-template <typename T>
-inline size_t
-size(std::vector<T> *v)
-{
-  return v->size();
-}
+    template <typename T>
+      inline size_t
+      size(std::vector<T> *v)
+      {
+        return v->size();
+      }
 
-// Sort an array, optionally with a sort lambda
-template <typename T>
-inline void
-sort(std::vector<T>& v)
-{
-  sort(v.begin(), v.end());
-}
+    // Sort an array, optionally with a sort lambda
+    template <typename T>
+      inline void
+      sort(std::vector<T>& v)
+      {
+        sort(v.begin(), v.end());
+      }
 
-template <typename T>
-inline void
-sort(std::vector<T> *v)
-{
-  sort(v->begin(), v->end());
-}
+    template <typename T>
+      inline void
+      sort(std::vector<T> *v)
+      {
+        sort(v->begin(), v->end());
+      }
 
-// Unique an array, this requires the array to be sorted already.
-template <typename T>
-inline void
-unique(std::vector<T>& v)
-{
-  v.erase(unique(v.begin(), v.end()), v.end());
-}
+    // Unique an array, this requires the array to be sorted already.
+    template <typename T>
+      inline void
+      unique(std::vector<T>& v)
+      {
+        v.erase(unique(v.begin(), v.end()), v.end());
+      }
 
-template <typename T>
-inline void
-unique(std::vector<T> *v)
-{
-  v->erase(unique(v->begin(), v->end()), v->end());
-}
+    template <typename T>
+      inline void
+      unique(std::vector<T> *v)
+      {
+        v->erase(unique(v->begin(), v->end()), v->end());
+      }
 
-#endif // _milou_array_H_
+  } // namespace array
+} // namespace milou
