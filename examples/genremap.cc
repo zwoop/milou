@@ -39,8 +39,8 @@
 static const int MAX_DNS_REQUESTS = 100; // Max outstanding DNS requestsa
 
 // One of these per resolver / state.
-struct MyState {
-  MyState()
+struct AresResolver {
+  AresResolver()
   {
     struct ares_options options;
 
@@ -51,7 +51,7 @@ struct MyState {
     ares_init_options(&_channel, &options, ARES_OPT_LOOKUPS);
   }
 
-  ~MyState()
+  ~AresResolver()
   {
     ares_destroy(_channel);
 #if CARES_HAVE_ARES_LIBRARY_CLEANUP
@@ -89,12 +89,12 @@ private:
 };
 
 struct AresRequest {
-  AresRequest(MyState *state)
+  AresRequest(AresResolver *state)
     : mDomain(""), mState(state)
   { }
 
   String mDomain;
-  MyState *mState;
+  AresResolver *mState;
 
   bool
   lookupNext()
@@ -140,7 +140,7 @@ caresCallback(void *arg, int status, int timeouts, struct hostent *hostent)
 int
 main(int argc, char* argv[])
 {
-  MyState state;
+  AresResolver state;
   auto reqs = MAX_DNS_REQUESTS;
 
   // TODO: Collect / move this to some standard startup
