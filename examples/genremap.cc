@@ -39,8 +39,10 @@
 static const int MAX_DNS_REQUESTS = 100; // Max outstanding DNS requestsa
 
 // One of these per resolver / state.
-struct AresResolver {
-  AresResolver()
+class DNSResolver {
+public:
+  // CTOR
+  DNSResolver()
   {
     struct ares_options options;
 
@@ -51,7 +53,8 @@ struct AresResolver {
     ares_init_options(&_channel, &options, ARES_OPT_LOOKUPS);
   }
 
-  ~AresResolver()
+  // DTOR
+  ~DNSResolver()
   {
     ares_destroy(_channel);
 #if CARES_HAVE_ARES_LIBRARY_CLEANUP
@@ -59,8 +62,10 @@ struct AresResolver {
 #endif
   }
 
+  // Main processing point, call this one you have populated a domain or
+  // two in the resolver.
   bool
-  aresProcess()
+  process()
   {
     int nfds;
     fd_set readers, writers;
@@ -89,12 +94,12 @@ private:
 };
 
 struct AresRequest {
-  AresRequest(AresResolver *state)
+  AresRequest(DNSResolver *state)
     : mDomain(""), mState(state)
   { }
 
   String mDomain;
-  AresResolver *mState;
+  DNSResolver *mState;
 
   bool
   lookupNext()
@@ -140,7 +145,7 @@ caresCallback(void *arg, int status, int timeouts, struct hostent *hostent)
 int
 main(int argc, char* argv[])
 {
-  AresResolver state;
+  DNSResolver res;
   auto reqs = MAX_DNS_REQUESTS;
 
   // TODO: Collect / move this to some standard startup
@@ -153,21 +158,21 @@ main(int argc, char* argv[])
     chomp(line);
     trim(line);
     if (size(line) > 0)
-      state.mDomains.push_back(line);
+      res.mDomains.push_back(line);
   }
 
-  sort(state.mDomains);
-  unique(state.mDomains);
+  sort(res.mDomains);
+  unique(res.mDomains);
 
   // Kick off MAX_DNS_REQUESTS initially, and then start the event loop.
   while (reqs-- != 0) {
-    AresRequest *req = new AresRequest(&state);
+    AresRequest *req = new AresRequest(&res);
 
     if (!req->lookupNext())
       break; // No more domains
   }
 
   // Spin baby, spin!
-  while (state.aresProcess())
+  while (res.process())
     ;
 }
