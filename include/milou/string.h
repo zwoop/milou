@@ -20,35 +20,49 @@
     limitations under the License.
 */
 
-#ifndef _milou_strings_H_
-#define _milou_strings_H_
+#pragma once
 
 #include <string>
 #include <boost/algorithm/string.hpp>
 
-namespace milou;
-namespace string;
+namespace milou {
+  namespace string {
 
-typedef std::string String;
+  typedef std::string String;
 
-// Trim any trailing \r\n.
-template<typename T>
-inline void
-chomp(T& input, const std::locale& loc=std::locale())
-{
-  boost::algorithm::trim_right_if(input, boost::is_any_of("\r\n"));
-}
+  // Trim any trailing \r\n.
+  template<typename T>
+  inline void
+  chomp(T& input, const std::locale& loc=std::locale())
+  {
+    boost::algorithm::trim_right_if(input, boost::is_any_of("\r\n"));
+  }
 
-inline size_t
-size(String& s)
-{
-  return s.size();
-}
+  inline size_t
+  size(String& s)
+  {
+    return s.size();
+  }
 
-inline size_t
-size(String *s)
-{
-  return s->size();
-}
+  inline size_t
+  size(String *s)
+  {
+    return s->size();
+  }
 
-#endif // _milou_strings_H_
+  } // namespace string
+} // namespace milou
+
+
+/*
+  local variables:
+  mode: C++
+  indent-tabs-mode: nil
+  c-basic-offset: 2
+  c-comment-only-line-offset: 0
+  c-file-offsets: ((statement-block-intro . +)
+  (label . 0)
+  (statement-cont . +)
+  (innamespace . 0))
+  end:
+*/

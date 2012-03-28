@@ -25,8 +25,7 @@
     limitations under the License.
 */
 
-#ifndef _milou_milou_H_
-#define _milou_milou_H_
+#pragma once
 
 #include <iostream>
 #include <algorithm>
@@ -46,4 +45,16 @@ using namespace milou::array;
 using namespace milou::perl;
 using namespace milou::dns;
 
-#endif // _milou_milou_H_
+
+/*
+  local variables:
+  mode: C++
+  indent-tabs-mode: nil
+  c-basic-offset: 2
+  c-comment-only-line-offset: 0
+  c-file-offsets: ((statement-block-intro . +)
+  (label . 0)
+  (statement-cont . +)
+  (innamespace . 0))
+  end:
+*/

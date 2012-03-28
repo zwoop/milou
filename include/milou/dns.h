@@ -20,65 +20,80 @@
     limitations under the License.
 */
 
-#ifndef _milou_dns_H_
-#define _milou_dns_H_
+#pragma once
 
-namespace milou;
-namespace dns;
+#include <milou/array.h>
 
-// One of these per resolver / state.
-class DNSResolver {
- public:
-  // CTOR
-  DNSResolver()
-    {
-      struct ares_options options;
+namespace milou {
+  namespace dns {
 
-      options.lookups = const_cast<char*>("b");
+    class DNSResolver {
+    public:
+      // CTOR
+      DNSResolver()
+      {
+        struct ares_options options;
+
+        options.lookups = const_cast<char*>("b");
 #if CARES_HAVE_ARES_LIBRARY_INIT
-      ares_library_init(ARES_LIB_INIT_ALL);
+        ares_library_init(ARES_LIB_INIT_ALL);
 #endif
-      ares_init_options(&_channel, &options, ARES_OPT_LOOKUPS);
-    }
+        ares_init_options(&_channel, &options, ARES_OPT_LOOKUPS);
+      }
 
-  // DTOR
-  ~DNSResolver()
-    {
-      ares_destroy(_channel);
+      // DTOR
+      ~DNSResolver()
+      {
+        ares_destroy(_channel);
 #if CARES_HAVE_ARES_LIBRARY_CLEANUP
-      ares_library_cleanup();
+        ares_library_cleanup();
 #endif
-    }
+      }
 
-  // Main processing point, call this one you have populated a domain or
-  // two in the resolver.
-  bool
-    process()
-  {
-    int nfds;
-    fd_set readers, writers;
-    struct timeval tv, *tvp;
+      // Main processing point, call this one you have populated a domain or
+      // two in the resolver.
+      bool
+      process()
+      {
+        int nfds;
+        fd_set readers, writers;
+        struct timeval tv, *tvp;
 
-    FD_ZERO(&readers);
-    FD_ZERO(&writers);
-    nfds = ares_fds(_channel, &readers, &writers);
-    if (nfds == 0)
-      return false;
+        FD_ZERO(&readers);
+        FD_ZERO(&writers);
+        nfds = ares_fds(_channel, &readers, &writers);
+        if (nfds == 0)
+          return false;
 
-    tvp = ares_timeout(_channel, NULL, &tv);
-    select(nfds, &readers, &writers, NULL, tvp);
-    ares_process(_channel, &readers, &writers);
+        tvp = ares_timeout(_channel, NULL, &tv);
+        select(nfds, &readers, &writers, NULL, tvp);
+        ares_process(_channel, &readers, &writers);
 
-    return true;
-  }
+        return true;
+      }
 
-  ares_channel channel() const { return _channel; }
+      ares_channel channel() const { return _channel; }
 
-  // Members
-  Strings mDomains;
+      // Members
+      milou::array::Strings mDomains;
 
- private:
-  ares_channel _channel;
-};
+    private:
+      ares_channel _channel;
+    };
 
-#endif // _milou_dns_H_
+  } // namespace dns
+} // namespace milou
+
+
+/*
+  local variables:
+  mode: C++
+  indent-tabs-mode: nil
+  c-basic-offset: 2
+  c-comment-only-line-offset: 0
+  c-file-offsets: ((statement-block-intro . +)
+  (label . 0)
+  (statement-cont . +)
+  (innamespace . 0))
+  end:
+*/

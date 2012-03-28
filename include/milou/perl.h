@@ -24,16 +24,30 @@
     limitations under the License.
 */
 
-#ifndef _milou_perl_H_
-#define _milou_perl_H_
-
-namespace milou;
-namespace perl;
+#pragma once
 
 #include <boost/any.hpp>
 
-typedef boost::any my;
+namespace milou {
+  namespace perl {
 
-using boost::any_cast;
+    typedef boost::any my;
 
-#endif // _milou_perl_H_
+    using boost::any_cast;
+
+  } // namespace perl
+} // namespace milou
+
+
+/*
+  local variables:
+  mode: C++
+  indent-tabs-mode: nil
+  c-basic-offset: 2
+  c-comment-only-line-offset: 0
+  c-file-offsets: ((statement-block-intro . +)
+  (label . 0)
+  (statement-cont . +)
+  (innamespace . 0))
+  end:
+*/
