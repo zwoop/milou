@@ -29,7 +29,7 @@
 
 #include <milou/array.h>
 #include <milou/string.h>
-#include <milou/pools.h>
+#include <milou/pool.h>
 
 namespace milou {
   namespace dns {
