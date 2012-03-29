@@ -22,16 +22,38 @@
 
 #pragma once
 
+#include <functional>
+
 #include <milou/array.h>
+#include <milou/string.h>
 
 namespace milou {
   namespace dns {
 
+    // Class holding one response object (tightly integrated with the Request)
+    struct DNSResponse {
+      DNSResponse(milou::string::String& s, struct hostent * h)
+        : mDomain(s), mHostent(h)
+      { }
+
+      milou::string::String& mDomain;
+      struct hostent *mHostent;
+    };
+
+    typedef std::function<void (const DNSResponse& resp)> DNSCallback;
+
+    // Main resolver object.
     class DNSResolver {
     public:
-      // CTOR
+      // CTORs
       DNSResolver()
+        : DNSResolver(10)
+      { }
+
+      DNSResolver(int p)
+        : _parallel(p), _reqs(0)
       {
+        // ToDo: We should have an option class awrapper too
         struct ares_options options;
 
         options.lookups = const_cast<char*>("b");
@@ -50,15 +72,37 @@ namespace milou {
 #endif
       }
 
-      // Main processing point, call this one you have populated a domain or
-      // two in the resolver.
-      bool
-      process()
+      // Some getter / setters.
+      ares_channel channel() const { return _channel; }
+      
+      int parallel() const { return _parallel; }
+      int parallel(int p) { return (_parallel = p); }
+
+      milou::array::Strings& domains() { return _domains; }
+      void push(milou::string::String& s) { _domains.push_back(s); }
+
+      // TODO: Add a "remove"
+      
+      void sort() { milou::array::sort(_domains); }
+      void unique() { milou::array::unique(_domains); }
+
+      bool process(DNSCallback func)
       {
         int nfds;
         fd_set readers, writers;
         struct timeval tv, *tvp;
 
+        while (_domains.size() > 0 && _reqs < _parallel) {
+          DNSRequest *req = new DNSRequest(this, func);
+
+          ++_reqs;
+          if (!req->lookupNext()) {  // Generally shouldn't happen...
+            delete req;
+            break;
+          }
+        }
+
+        // Now process whatever we have "pending".
         FD_ZERO(&readers);
         FD_ZERO(&writers);
         nfds = ares_fds(_channel, &readers, &writers);
@@ -72,13 +116,58 @@ namespace milou {
         return true;
       }
 
-      ares_channel channel() const { return _channel; }
-
-      // Members
-      milou::array::Strings mDomains;
-
     private:
+      class DNSRequest {
+      public:
+
+        DNSRequest(DNSResolver *resolver, DNSCallback func)
+          : _domain(""), _resolver(resolver), _function(func)
+        { }
+
+        ~DNSRequest()
+        {
+          --_resolver->_reqs; // Kludgy ...
+        }
+
+        bool
+        lookupNext()
+        {
+          if (_resolver->_domains.size() > 0) {
+            _domain = _resolver->_domains.back();
+            _resolver->_domains.pop_back();
+            ares_gethostbyname(_resolver->channel(), _domain.c_str(), AF_INET, (ares_host_callback)&_callback, this);
+            return true;
+          }
+
+          _domain = milou::string::NULL_STRING;
+          return false;
+        }
+
+        // DNSResponse mResponse;
+
+      private:
+        static void
+        _callback(void *arg, int status, int timeouts, struct hostent *hostent)
+        {
+          DNSRequest *req = static_cast<DNSRequest*>(arg);
+          DNSResponse resp(req->_domain, hostent);
+
+          req->_function(resp);
+
+          // Kick off more requests, if possible.
+          if (!req->lookupNext())
+            delete req;
+        }
+
+        milou::string::String _domain;
+        DNSResolver *_resolver;
+        DNSCallback _function;
+      };
+
       ares_channel _channel;
+      int _parallel;
+      int _reqs;
+      milou::array::Strings _domains;
     };
 
   } // namespace dns

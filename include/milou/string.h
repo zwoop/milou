@@ -28,27 +28,24 @@
 namespace milou {
   namespace string {
 
-  typedef std::string String;
+    typedef std::string String;
 
-  // Trim any trailing \r\n.
-  template<typename T>
-  inline void
-  chomp(T& input, const std::locale& loc=std::locale())
-  {
-    boost::algorithm::trim_right_if(input, boost::is_any_of("\r\n"));
-  }
+    String const NULL_STRING;
 
-  inline size_t
-  size(String& s)
-  {
-    return s.size();
-  }
+    // Trim any trailing \r\n.
+    template<typename T>
+    inline void
+    chomp(T& input, const std::locale& loc=std::locale())
+    {
+      boost::algorithm::trim_right_if(input, boost::is_any_of("\r\n"));
+    }
 
-  inline size_t
-  size(String *s)
-  {
-    return s->size();
-  }
+    // Convenience for getting the size of a string.
+    size_t size(String& s) { return s.size(); }
+    size_t size(const String& s) { return s.size(); }
+
+    size_t size(String *s) { return s->size(); }
+    size_t size(const String *s) { return s->size(); }
 
   } // namespace string
 } // namespace milou

@@ -34,66 +34,13 @@
 
 #include <milou/milou.h> // This is the easiest "kitchen sink" include
 
-
-// Standard stuff, we should include this with milou/milou.h
-static const int MAX_DNS_REQUESTS = 100; // Max outstanding DNS requestsa
-
-struct AresRequest {
-  AresRequest(DNSResolver *state)
-    : mDomain(""), mState(state)
-  { }
-
-  String mDomain;
-  DNSResolver *mState;
-
-  bool
-  lookupNext()
-  {
-    // Forward decl
-    void caresCallback(void *arg, int status, int timeouts, struct hostent *hostent);
-
-    if (size(mState->mDomains) > 0) {
-      mDomain = mState->mDomains.back();
-      mState->mDomains.pop_back();
-      if (size(mDomain) > 0) {
-        ares_gethostbyname(mState->channel(), mDomain.c_str(), AF_INET, (ares_host_callback)&caresCallback, this);
-        return true;
-      }
-    }
-    return false;
-  }
-
-};
-
-
-void
-caresCallback(void *arg, int status, int timeouts, struct hostent *hostent)
-{
-  AresRequest *req = static_cast<AresRequest*>(arg);
-
-  if (hostent) {
-    char ip[INET6_ADDRSTRLEN];
-
-    inet_ntop(hostent->h_addrtype, hostent->h_addr_list[0], ip, sizeof(ip));
-    cout << "map http://" << req->mDomain << " http://" << ip << endl;
-  } else {
-    cerr << "Failed lookup: #" << req->mDomain << "#" << endl;
-  }
-
-  if (!req->lookupNext())
-    delete req;
-}
-
-
-// Main entry point for this script. The fluff above is only to deal with a
-// wonky asynchronous resolver (we probably should abstract that away ...)
+// TODO: We should have a milou_main()
 int
 main(int argc, char* argv[])
 {
-  DNSResolver res;
-  auto reqs = MAX_DNS_REQUESTS;
+  DNSResolver res(100);
 
-  // TODO: Collect / move this to some standard startup
+  // TODO: Collect / move this to some standard startup?
   ios_base::sync_with_stdio(false);
 
   while (cin) {
@@ -103,22 +50,25 @@ main(int argc, char* argv[])
     chomp(line);
     trim(line);
     if (size(line) > 0)
-      res.mDomains.push_back(line);
+      res.push(line);
   }
 
-  sort(res.mDomains);
-  unique(res.mDomains);
+  res.sort();
+  res.unique();
 
-  // Kick off MAX_DNS_REQUESTS initially, and then start the event loop.
-  while (reqs-- != 0) {
-    AresRequest *req = new AresRequest(&res);
+  auto func = [&] (const DNSResponse &response) {
+    if (response.mHostent) {
+      char ip[INET6_ADDRSTRLEN];
 
-    if (!req->lookupNext())
-      break; // No more domains
-  }
+      inet_ntop(response.mHostent->h_addrtype, response.mHostent->h_addr_list[0], ip, sizeof(ip));
+      std::cout << "map http://" << response.mDomain << " http://" << ip << std::endl;
+    } else {
+      std::cerr << "Failed lookup: #" << response.mDomain << "#" << std::endl;
+    }
+  };
 
   // Spin baby, spin!
-  while (res.process())
+  while (res.process(func))
     ;
 }
 
