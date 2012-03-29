@@ -22,10 +22,14 @@
 
 #pragma once
 
+#include <ares.h>
+#include <netdb.h>
+
 #include <functional>
 
 #include <milou/array.h>
 #include <milou/string.h>
+#include <milou/pools.h>
 
 namespace milou {
   namespace dns {
@@ -47,11 +51,15 @@ namespace milou {
     public:
       // CTORs
       DNSResolver()
-        : DNSResolver(10)
+        : DNSResolver(10, NULL)
       { }
 
-      DNSResolver(int p)
-        : _parallel(p), _reqs(0)
+      DNSResolver(DNSCallback func)
+        : DNSResolver(10, func)
+      { }
+
+      DNSResolver(int p, DNSCallback func)
+        : _parallel(p), _callback(func), _reqs(0)
       {
         // ToDo: We should have an option class awrapper too
         struct ares_options options;
@@ -79,25 +87,37 @@ namespace milou {
       int parallel(int p) { return (_parallel = p); }
 
       milou::array::Strings& domains() { return _domains; }
-      void push(milou::string::String& s) { _domains.push_back(s); }
 
-      // TODO: Add a "remove"
+      void
+      resolve(milou::string::String& s)
+      {
+        _domains.push_back(s);
+      }
+
+      void
+      cancel(milou::string::String& s)
+      {
+        auto it = find(_domains.begin(), _domains.end(), s);
+
+        if (it != _domains.end())
+          _domains.erase(it);
+      }
       
       void sort() { milou::array::sort(_domains); }
       void unique() { milou::array::unique(_domains); }
 
-      bool process(DNSCallback func)
+      bool process()
       {
         int nfds;
         fd_set readers, writers;
         struct timeval tv, *tvp;
 
         while (_domains.size() > 0 && _reqs < _parallel) {
-          DNSRequest *req = new DNSRequest(this, func);
+          DNSRequest *req = _allocator.construct(this, _callback);
 
           ++_reqs;
           if (!req->lookupNext()) {  // Generally shouldn't happen...
-            delete req;
+            _allocator.destroy(req);
             break;
           }
         }
@@ -124,10 +144,7 @@ namespace milou {
           : _domain(""), _resolver(resolver), _function(func)
         { }
 
-        ~DNSRequest()
-        {
-          --_resolver->_reqs; // Kludgy ...
-        }
+        ~DNSRequest() { --_resolver->_reqs; }
 
         bool
         lookupNext()
@@ -156,7 +173,7 @@ namespace milou {
 
           // Kick off more requests, if possible.
           if (!req->lookupNext())
-            delete req;
+            req->_resolver->_allocator.destroy(req);
         }
 
         milou::string::String _domain;
@@ -166,8 +183,10 @@ namespace milou {
 
       ares_channel _channel;
       int _parallel;
+      DNSCallback _callback;
       int _reqs;
       milou::array::Strings _domains;
+      boost::object_pool<DNSRequest> _allocator;
     };
 
   } // namespace dns

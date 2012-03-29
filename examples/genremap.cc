@@ -1,7 +1,7 @@
 // #!/bin/env milou -lcares
 // Implies -std=c++0x with gcc
 
-// /opt/gcc/bin/g++  -g -O3 -Wall -L/opt/gcc/lib64 -Wl,-rpath=/opt/gcc/lib64 -I ../include -std=c++11 -lcares genremap.cc
+// /opt/gcc/bin/g++  -g -O3 -pedantic -Wall -L/opt/gcc/lib64 -Wl,-rpath=/opt/gcc/lib64 -I ../include -std=c++11 -lcares genremap.cc
 
 /** @file
 
@@ -28,17 +28,29 @@
     limitations under the License.
 */
 
-#include <ares.h>
-#include <netdb.h>
 #include <arpa/inet.h>
 
 #include <milou/milou.h> // This is the easiest "kitchen sink" include
 
-// TODO: We should have a milou_main()
+// This gets called everytime we get a response from the DNS processor.
+// It could also be a lambda, or functor.
+void
+callback(const DNSResponse &response)
+{
+  if (response.mHostent) {
+    char ip[INET6_ADDRSTRLEN];
+
+    inet_ntop(response.mHostent->h_addrtype, response.mHostent->h_addr_list[0], ip, sizeof(ip));
+    std::cout << "map http://" << response.mDomain << " http://" << ip << std::endl;
+  } else {
+    std::cerr << "Failed lookup: #" << response.mDomain << "#" << std::endl;
+  }
+}
+
 int
 main(int argc, char* argv[])
 {
-  DNSResolver res(100);
+  DNSResolver res(100, callback);
 
   // TODO: Collect / move this to some standard startup?
   ios_base::sync_with_stdio(false);
@@ -50,25 +62,14 @@ main(int argc, char* argv[])
     chomp(line);
     trim(line);
     if (size(line) > 0)
-      res.push(line);
+      res.resolve(line);
   }
 
   res.sort();
   res.unique();
 
-  auto func = [&] (const DNSResponse &response) {
-    if (response.mHostent) {
-      char ip[INET6_ADDRSTRLEN];
-
-      inet_ntop(response.mHostent->h_addrtype, response.mHostent->h_addr_list[0], ip, sizeof(ip));
-      std::cout << "map http://" << response.mDomain << " http://" << ip << std::endl;
-    } else {
-      std::cerr << "Failed lookup: #" << response.mDomain << "#" << std::endl;
-    }
-  };
-
   // Spin baby, spin!
-  while (res.process(func))
+  while (res.process())
     ;
 }
 
