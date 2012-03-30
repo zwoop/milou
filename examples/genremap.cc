@@ -41,9 +41,9 @@ callback(const DNSResponse &response)
     char ip[INET6_ADDRSTRLEN];
 
     inet_ntop(response.mHostent->h_addrtype, response.mHostent->h_addr_list[0], ip, sizeof(ip));
-    std::cout << "map http://" << response.mDomain << " http://" << ip << std::endl;
+    cout << nounitbuf << "map http://" << response.mDomain << " http://" << ip << endl;
   } else {
-    std::cerr << "Failed lookup: #" << response.mDomain << "#" << std::endl;
+    cerr << "Failed lookup: " << response.mDomain << endl;
   }
 }
 
@@ -61,8 +61,7 @@ main(int argc, char* argv[])
     getline(cin, line);
     chomp(line);
     trim(line);
-    if (size(line) > 0)
-      res.resolve(line);
+    res.resolve(line);
   }
 
   res.sort();

@@ -88,10 +88,14 @@ namespace milou {
 
       milou::array::Strings& domains() { return _domains; }
 
-      void
+      bool
       resolve(milou::string::String& s)
       {
-        _domains.push_back(s);
+        if (s.size() > 0) {
+          _domains.push_back(s);
+          return true;
+        }
+        return false;
       }
 
       void
