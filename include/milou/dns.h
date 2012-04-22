@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include <arpa/inet.h>
+
 #include <ares.h>
 #include <netdb.h>
 
@@ -30,6 +32,12 @@
 #include <milou/array.h>
 #include <milou/string.h>
 #include <milou/pool.h>
+
+void
+sock_callback(void *data, ares_socket_t socket_fd, int readable, int writable)
+{
+}
+
 
 namespace milou {
   namespace dns {
@@ -40,6 +48,23 @@ namespace milou {
         : mDomain(s), mHostent(h)
       { }
 
+      // Return a vector of all IPs, as strings.
+      milou::array::Strings
+      ips() const
+      {
+        milou::array::Strings str;
+
+        if (mHostent) {
+          char ip[INET6_ADDRSTRLEN];
+
+          // TODO: Loop through all the IPs here.
+          inet_ntop(mHostent->h_addrtype, mHostent->h_addr_list[0], ip, sizeof(ip));
+          str.push_back(ip);
+        }
+
+        return str;
+      }
+
       milou::string::String& mDomain;
       struct hostent *mHostent;
     };
@@ -49,7 +74,7 @@ namespace milou {
     // Main resolver object.
     class DNSResolver {
     public:
-      // CTORs
+      // CTOR
       DNSResolver()
         : DNSResolver(10, NULL)
       { }
@@ -65,10 +90,11 @@ namespace milou {
         struct ares_options options;
 
         options.lookups = const_cast<char*>("b");
+        options.sock_state_cb_data = (void*)&sock_callback;
 #if CARES_HAVE_ARES_LIBRARY_INIT
         ares_library_init(ARES_LIB_INIT_ALL);
 #endif
-        ares_init_options(&_channel, &options, ARES_OPT_LOOKUPS);
+        ares_init_options(&_channel, &options, ARES_OPT_LOOKUPS|ARES_OPT_SOCK_STATE_CB);
       }
 
       // DTOR

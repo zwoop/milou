@@ -28,8 +28,6 @@
     limitations under the License.
 */
 
-#include <arpa/inet.h>
-
 #include <milou/milou.h> // This is the easiest "kitchen sink" include
 
 // This gets called everytime we get a response from the DNS processor.
@@ -37,14 +35,12 @@
 void
 callback(const DNSResponse &response)
 {
-  if (response.mHostent) {
-    char ip[INET6_ADDRSTRLEN];
+  Strings ips = response.ips();
 
-    inet_ntop(response.mHostent->h_addrtype, response.mHostent->h_addr_list[0], ip, sizeof(ip));
-    cout << nounitbuf << "map http://" << response.mDomain << " http://" << ip << endl;
-  } else {
+  if (size(ips) > 0)
+    cout << nounitbuf << "map http://" << response.mDomain << " http://" << ips[0] << endl;
+  else
     cerr << "Failed lookup: " << response.mDomain << endl;
-  }
 }
 
 int
