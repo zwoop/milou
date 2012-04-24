@@ -32,8 +32,9 @@
 #include <milou/array.h>
 #include <milou/string.h>
 #include <milou/pool.h>
+#include <milou/events.h>
 
-void
+static void
 sock_callback(void *data, ares_socket_t socket_fd, int readable, int writable)
 {
 }
@@ -43,10 +44,31 @@ namespace milou {
   namespace dns {
 
     // Class holding one response object (tightly integrated with the Request)
-    struct DNSResponse {
+    class DNSResponse {
+    public:
       DNSResponse(milou::string::String& s, struct hostent * h)
         : mDomain(s), mHostent(h)
       { }
+
+      // Return a given IP in the response (first by default)
+      milou::string::String
+      ip(int ix = 0) const
+      {
+        if (mHostent && mHostent->h_addr_list) {
+          char **list = mHostent->h_addr_list;
+          char ip[INET6_ADDRSTRLEN];
+
+          while (*list && ix-- > 0)
+            ++list;
+
+          if (*list) {
+            inet_ntop(mHostent->h_addrtype, *list, ip, sizeof(ip));
+            return ip;
+          }
+        }
+
+        return milou::string::NULL_STRING;
+      }
 
       // Return a vector of all IPs, as strings.
       milou::array::Strings
@@ -54,11 +76,14 @@ namespace milou {
       {
         milou::array::Strings str;
 
-        if (mHostent) {
+        if (mHostent && mHostent->h_addr_list) {
+          char **list = mHostent->h_addr_list;
           char ip[INET6_ADDRSTRLEN];
 
-          // TODO: Loop through all the IPs here.
-          inet_ntop(mHostent->h_addrtype, mHostent->h_addr_list[0], ip, sizeof(ip));
+          while (*list) {
+            inet_ntop(mHostent->h_addrtype, *list, ip, sizeof(ip));
+            ++list;
+          }
           str.push_back(ip);
         }
 
@@ -75,6 +100,7 @@ namespace milou {
     class DNSResolver {
     public:
       // CTOR
+#if HAS_DELEGATING_CONSTRUCTOR
       DNSResolver()
         : DNSResolver(10, NULL)
       { }
@@ -84,16 +110,22 @@ namespace milou {
       { }
 
       DNSResolver(int p, DNSCallback func)
+#else
+      DNSResolver(int p=10, DNSCallback func=NULL)
+#endif
         : _parallel(p), _callback(func), _reqs(0)
+
       {
         // ToDo: We should have an option class awrapper too
         struct ares_options options;
 
-        options.lookups = const_cast<char*>("b");
-        options.sock_state_cb_data = (void*)&sock_callback;
 #if CARES_HAVE_ARES_LIBRARY_INIT
         ares_library_init(ARES_LIB_INIT_ALL);
 #endif
+        options.sock_state_cb = sock_callback;
+        options.sock_state_cb_data = NULL;
+        options.lookups = const_cast<char*>("b");
+
         ares_init_options(&_channel, &options, ARES_OPT_LOOKUPS|ARES_OPT_SOCK_STATE_CB);
       }
 
@@ -165,6 +197,18 @@ namespace milou {
 
         return true;
       }
+
+      // Process all requests... This is a "main" event loop.
+      // TODO: Once we have more asynchronous libraries, we should
+      // unify this all into one event loop.
+      void event_loop()
+      {
+        while (1) {
+          if (!process())
+            break;
+        }
+      }
+
 
     private:
       class DNSRequest {

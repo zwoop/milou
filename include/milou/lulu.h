@@ -27,24 +27,15 @@
 
 #pragma once
 
-#include <iostream>
-#include <algorithm>
-#include <vector>
+#if defined(__has_feature)
+# define HAS_FEATURE(x) __has_feature(x)
+#else
+# define HAS_FEATURE(x) 0
+#endif
 
-#include <milou/lulu.h>
-#include <milou/string.h>
-#include <milou/array.h>
-#include <milou/perl.h>
-#include <milou/dns.h>
+#define HAS_DELEGATING_CONSTRUCTOR HAS_FEATURE(cxx_delegating_constructors) ||\
+                                   defined(__GNUC__) && (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 7)
 
-// Also make sure to drag in the kitchen sink into the name space.
-using namespace std;
-using namespace boost::algorithm;
-
-using namespace milou::string;
-using namespace milou::array;
-using namespace milou::perl;
-using namespace milou::dns;
 
 
 /*

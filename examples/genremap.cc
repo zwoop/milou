@@ -35,10 +35,10 @@
 void
 callback(const DNSResponse &response)
 {
-  Strings ips = response.ips();
+  String ip = response.ip();
 
-  if (size(ips) > 0)
-    cout << nounitbuf << "map http://" << response.mDomain << " http://" << ips[0] << endl;
+  if (size(ip) > 0)
+    cout << nounitbuf << "map http://" << response.mDomain << " http://" << ip << endl;
   else
     cerr << "Failed lookup: " << response.mDomain << endl;
 }
@@ -64,8 +64,7 @@ main(int argc, char* argv[])
   res.unique();
 
   // Spin baby, spin!
-  while (res.process())
-    ;
+  res.event_loop();
 }
 
 
