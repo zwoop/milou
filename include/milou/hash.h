@@ -1,11 +1,6 @@
 /** @file
 
-    This is a convenience include file, intended for the typical user to
-    include. This does pull in the kitchen sink, but for a "script" it is
-    fine.
-
-    This focusing on the fact that the "scripts" should be as short and
-    quick to type as possible.
+    Various hash bucket algorithms and containers.
 
     @section license License
 
@@ -16,7 +11,7 @@
     "License"); you may not use this file except in compliance with the
     License.  You may obtain a copy of the License at
 
-        http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
     Unless required by applicable law or agreed to in writing, software
     distributed under the License is distributed on an "AS IS" BASIS,
@@ -27,27 +22,13 @@
 
 #pragma once
 
-#include <iostream>
-#include <algorithm>
-#include <vector>
-
-#include <milou/lulu.h>
 #include <milou/string.h>
-#include <milou/array.h>
-#include <milou/hash.h>
-#include <milou/perl.h>
-#include <milou/dns.h>
 
-// Also make sure to drag in the kitchen sink into the name space.
-using namespace std;
-using namespace boost::algorithm;
+namespace milou {
+  namespace hash {
 
-using namespace milou::string;
-using namespace milou::array;
-using namespace milou::hash;
-using namespace milou::events;
-using namespace milou::perl;
-using namespace milou::dns;
+  } // namespace hash
+} // namespace milou
 
 
 /*

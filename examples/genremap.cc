@@ -28,42 +28,50 @@
     limitations under the License.
 */
 
-#include <milou/milou.h> // This is the easiest "kitchen sink" include
+// This is the easiest "kitchen sink" include
+#include <milou/milou.h>
+
 
 // This gets called everytime we get a response from the DNS processor.
 // It could also be a lambda, or functor.
 void
 callback(const DNSResponse &response)
 {
+#if 0
   String ip = response.ip();
 
   if (size(ip) > 0)
-    cout << nounitbuf << "map http://" << response.mDomain << " http://" << ip << endl;
+    cout << "map http://" << response.mDomain << " http://" << ip << endl;
   else
     cerr << "Failed lookup: " << response.mDomain << endl;
+#endif
 }
 
 int
 main(int argc, char* argv[])
 {
   DNSResolver res(100, callback);
+  EventLoop loop;
 
   // TODO: Collect / move this to some standard startup?
   ios_base::sync_with_stdio(false);
+  cout << nounitbuf;
 
+  // Read all the STDIN lines, and add them to be resolved.
   while (cin) {
     String line;
 
     getline(cin, line);
     chomp(line);
     trim(line);
-    res.resolve(line);
+    res.queue(line);
   }
 
+  // Sort and unique all the resolver requests.
   res.sort();
   res.unique();
 
-  // Spin baby, spin!
+  //loop.loop(res);
   res.event_loop();
 }
 

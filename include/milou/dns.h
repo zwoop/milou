@@ -37,6 +37,9 @@
 static void
 sock_callback(void *data, ares_socket_t socket_fd, int readable, int writable)
 {
+  printf("socket_fd is %d\n", (int)socket_fd);
+  printf("readable is %d\n", (int)readable);
+  printf("writable is %d\n\n\n", (int)writable);
 }
 
 
@@ -97,7 +100,7 @@ namespace milou {
     typedef std::function<void (const DNSResponse& resp)> DNSCallback;
 
     // Main resolver object.
-    class DNSResolver {
+    class DNSResolver: public milou::events::EventHandler {
     public:
       // CTOR
 #if HAS_DELEGATING_CONSTRUCTOR
@@ -147,7 +150,7 @@ namespace milou {
       milou::array::Strings& domains() { return _domains; }
 
       bool
-      resolve(milou::string::String& s)
+      queue(milou::string::String& s)
       {
         if (s.size() > 0) {
           _domains.push_back(s);
@@ -258,6 +261,7 @@ namespace milou {
       ares_channel _channel;
       int _parallel;
       DNSCallback _callback;
+      ev_io _fds[1024];
       int _reqs;
       milou::array::Strings _domains;
       boost::object_pool<DNSRequest> _allocator;

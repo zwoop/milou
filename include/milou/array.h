@@ -1,6 +1,6 @@
 /** @file
 
-    Various string related algorithms and extensions.
+    Various array containers and algorithms.
 
     @section license License
 

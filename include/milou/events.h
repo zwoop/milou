@@ -23,14 +23,66 @@
 
 #pragma once
 
-#include <ares.h>
-#include <netdb.h>
-#include <sys/time.h>
-
-#include <functional>
+#include <libev/ev.h>
+#include <vector>
 
 namespace milou {
   namespace events {
+
+    // Base class for all event handling classes.
+    class EventLoop;
+    class EventHandler {
+    public:
+      EventHandler()
+        : _started(false)
+      { }
+
+      virtual void start(EventLoop *loop) { _started = true;}
+
+    private:
+      bool _started;
+    };
+
+    // TODO: Should this store a smart ptr instead?
+    typedef std::vector<EventHandler> EventHandlers;
+
+    class EventLoop {
+    public:
+      EventLoop()
+        : _loop(EV_DEFAULT)
+      { }
+
+      void add(EventHandler &h, bool start=true) {
+        if (start) {
+          h.start(this);
+          _started.push_back(h);
+        } else {
+          _pending.push_back(h);
+        }
+      }
+
+      void loop() {
+        // Make sure all handlers have started before we go into the event loop.
+        for (auto h : _pending) {
+          h.start(this);
+          _started.push_back(h); // TODO: Figure out how to move between containers without copy semantics.
+        }
+      }
+
+      // Convenient, for the case when there is only one EventHandler, we can
+      // add it, and start the event loop all in one call.
+      void
+      loop(EventHandler &h) {
+        h.start(this);
+        _started.push_back(h);
+        loop();
+      }
+
+    private:
+      EventHandlers _pending;
+      EventHandlers _started;
+      struct ev_loop *_loop;
+    };
 
   } // namespace events
 } // namespace milou
